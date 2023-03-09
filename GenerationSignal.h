@@ -25,8 +25,8 @@ public:
     double zader=0.3;
     int kol_bit;
     double sizeSPM;
-    int KolSat = 2;
-    int KolSour = 1;
+    int KolSat = 3;
+    int KolSour = 2;
 
 
     /**Function*/
@@ -65,6 +65,7 @@ public:
     InfoList info;
     QVector<QString> listt;
     vector<vector<double>> SummSignal;
+    vector<double> sign;
 
     vector<double> sdvigTime;
     vector<double> sdvigFreq;
