@@ -563,7 +563,7 @@ QVector<QVector<double>> GenerationSignal::GenerateShortSignal(ParamSignal& para
 
     int samples_in_bit = (int)(samplingFrequency / Bitrate);// кол-во отсчетов на 1 бит
     double sampling_period = 1. / samplingFrequency;// период дискретизации
-    InputSignal.clear();
+
     vector<double> sign;
     vector<double> Bit;
 
@@ -573,6 +573,8 @@ QVector<QVector<double>> GenerationSignal::GenerateShortSignal(ParamSignal& para
     double Ampl = 1.;
     param.koef_dur = 1;
     bitPosl.clear();
+    InputSignal.clear();
+    InputSignal.resize(KolSour);
     bitPosl.resize(KolSour);
     for(int i=0;i<KolSour;i++) {
         while (dbl_index < startTimestamp + param.koef_dur * Duration) {
@@ -583,7 +585,7 @@ QVector<QVector<double>> GenerationSignal::GenerateShortSignal(ParamSignal& para
                     //deltaF = 100000;
                 else phase = 3.1415926535897;
                 //deltaF=0;
-                InputSignal.push_back(Ampl * sin(2 * 3.1415926535897 * (param.f0) * dbl_index + phase));
+                InputSignal[i].push_back(Ampl * sin(2 * 3.1415926535897 * (param.f0) * dbl_index + phase));
                 sign.push_back(Ampl * cos(2 * 3.1415926535897 * param.f0 * dbl_index));
                 dbl_index += sampling_period;
                 Bit.push_back((int) bit);
@@ -591,29 +593,19 @@ QVector<QVector<double>> GenerationSignal::GenerateShortSignal(ParamSignal& para
             }
         }
         dbl_index = 0;
-        ClearSignal = InputSignal;
+        //ClearSignal = InputSignal;
         //addNoise(sign, 10, param);
         //addNoise(InputSignal, 10, param);
-
-        vector<vector<double>> cor;
-        cor.resize(1);
-        cor[0] = InputSignal;
-
-        vector<vector<double>> corr;
-        corr.resize(1);
-        corr[0] = Bit;
-
-        GetSigma(InputSignal, sign, Sigma, param);
     }
 
     QVector<QVector<double>> XY;
     XY.resize(2);
-    y.resize(Sigma.size());
-    x.resize(Sigma.size());
+    y.resize(InputSignal[0].size());
+    x.resize(InputSignal[0].size());
     dbl_index=0;
-    for(int i=0;i<Sigma.size();i++)
+    for(int i=0;i<InputSignal[0].size();i++)
     {
-        y[i]=Sigma[i];
+        y[i]=InputSignal[0][i];
         x[i]=dbl_index += sampling_period;
     }
     XY[0]=x;
@@ -642,6 +634,22 @@ void GenerationSignal::coherentSumm(vector<vector<double>> &sgs, vector<double> 
             result[j] += sgs[i][j];
         }
     }
+}
+
+void GenerationSignal::transformSignal(vector<double>& base_signal, double delay, double duration, double fshift, double scale, double SNR, vector<double>& ret_sig, ParamSignal& param)
+{
+    double time_shift = delay * param.fdisk;
+    int size_of_sample = (int)(duration * param.fdisk);
+    if (time_shift < base_signal.size() && (time_shift + size_of_sample) < base_signal.size())
+    {
+        for (int i = 0; i < (size_of_sample); i++)
+        {
+            ret_sig.push_back(
+                    base_signal[(unsigned int)((double)i / scale + time_shift)] *
+                   cos( 2. * M_PI * fshift * (1. / param.fdisk) * (double)i));
+        }
+    }
+    addNoise(ret_sig, SNR, param);
 }
 
 QVector<QVector<double>> GenerationSignal::GenerateLongSignal(ParamSignal& param, int& size)
@@ -681,7 +689,7 @@ QVector<QVector<double>> GenerationSignal::GenerateLongSignal(ParamSignal& param
     {
         for(int j=0;j<KolSat;j++)
         {
-            sdvigTime.push_back(DoubleRand(5, 0));
+            sdvigTime.push_back(1. + 0.5 * ((double)rand() / RAND_MAX - 0.5));
         }
     }
 
@@ -689,7 +697,7 @@ QVector<QVector<double>> GenerationSignal::GenerateLongSignal(ParamSignal& param
     {
         for(int j=0;j<KolSat;j++)
         {
-            sdvigFreq.push_back(0);
+            sdvigFreq.push_back(DoubleRand(1000,-1000));
         }
     }
 
@@ -699,43 +707,17 @@ QVector<QVector<double>> GenerationSignal::GenerateLongSignal(ParamSignal& param
 
     LongSignal.resize(KolSat);
     LongSigma.resize(KolSat);
+    double d = Duration / 100;
     for(int i=0;i<KolSat;i++)
     {
         sign.clear();
         LongSignal[i].resize(KolSour);
         for(int j=0;j<KolSour;j++)
         {
-            while (dbl_index < startTimestamp + param.koef_dur *Duration)
-            {
-                double bit = RandomBit(0.5);
-                for (int n_sample = 0; n_sample < samples_in_bit; n_sample++)
-                {
-                    if (dbl_index< sdvigTime[i + KolSat * j]*Duration || iter > size-1)
-                    {
-                        if (bit == 0) phase = 0.;
-                        else phase = 3.1415926535897;
-                        LongSignal[i][j].push_back(Ampl * sin(2 * 3.1415926535897 * (param.f0 + sdvigFreq[i + KolSat * j]) * dbl_index + phase));
-                    }
-                    else
-                    {
-                        if (bitPosl[j][iter] == 0) phase = 0.;
-                        else phase = 3.1415926535897;
-                        LongSignal[i][j].push_back(Ampl * sin(2 * 3.1415926535897 * (param.f0 + sdvigFreq[i + KolSat * j]) * dbl_index + phase));
-                        iter++;
-                    }
-                    sign.push_back(Ampl * cos(2 * 3.1415926535897 * (param.f0) * dbl_index));
-                    dbl_index += sampling_period;
-                }
-                //kol_bit++;
-            }
-            addNoise(LongSignal[i][j], param.snr, param);
-            addNoise(sign, param.snr, param);
-            iter = 0;
-            //kol_bit = 0;
-            dbl_index = 0;
+            transformSignal(InputSignal[j], sdvigTime[i + KolSat * j] * d, d, sdvigFreq[i + KolSat * j], 1, param.snr, LongSignal[i][j], param);
         }
 
-        vector<vector<double>> vc;
+        /*vector<vector<double>> vc;
         vc.resize(KolSour);
         for(int j=0;j<KolSour;j++)
         {
@@ -763,7 +745,7 @@ QVector<QVector<double>> GenerationSignal::GenerateLongSignal(ParamSignal& param
                 sgs[1] = vc[j];
                 coherentSumm(sgs, SummSignal[i]);
             }
-        }
+        }*/
 
        // GetSigma(SummSignal[i], sign, LongSigma[i], param);
     }
@@ -773,12 +755,12 @@ QVector<QVector<double>> GenerationSignal::GenerateLongSignal(ParamSignal& param
 
     QVector<QVector<double>> XY;
     XY.resize(2);
-    y.resize(SummSignal[1].size());
-    x.resize(SummSignal[1].size());
+    y.resize(LongSignal[0][0].size());
+    x.resize(LongSignal[0][0].size());
     dbl_index=0;
-    for(int i=0;i<SummSignal[1].size();i++)
+    for(int i=0;i<LongSignal[0][0].size();i++)
     {
-        y[i]=SummSignal[1][i];
+        y[i]=LongSignal[0][0][i];
         x[i]=dbl_index += sampling_period;
     }
     XY[0]=x;

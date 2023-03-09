@@ -15,11 +15,11 @@ namespace ui_gui {
 
     gui::gui(QWidget *parent) : QWidget(parent), ui(new Ui::gui) {
         ui->setupUi(this);
-        ui->f0->setText(QString::number(25000));
-        ui->fdisk->setText(QString::number(250000));
+        ui->f0->setText(QString::number(250000));
+        ui->fdisk->setText(QString::number(250000000));
         ui->SNR->setText(QString::number(20));
-        ui->bitrate->setText(QString::number(4800));
-        ui->duration->setText(QString::number(0.001));
+        ui->bitrate->setText(QString::number(100000));
+        ui->duration->setText(QString::number(0.005));
         ui->outputT->setText(QString::number(30));
         ui->p->setText(QString::number(7));
         ui->koef_dur->setText(QString::number(0.5));
@@ -79,7 +79,7 @@ namespace ui_gui {
         ui->shortSigma->yAxis->setLabel("ampl");
         // задаем размеры осей
         ui->shortSigma->xAxis->setRange(minX, maxX);
-        ui->shortSigma->yAxis->setRange(minY, maxY);
+        ui->shortSigma->yAxis->setRange(minY-1, maxY);
         ui->shortSigma->replot();
     }
 
@@ -98,7 +98,7 @@ namespace ui_gui {
         ui->longSigma->yAxis->setLabel("ampl");
         // задаем размеры осей
         ui->longSigma->xAxis->setRange(minX, maxX);
-        ui->longSigma->yAxis->setRange(minY, maxY);
+        ui->longSigma->yAxis->setRange(minY-1, maxY);
         ui->longSigma->replot();
 
     }

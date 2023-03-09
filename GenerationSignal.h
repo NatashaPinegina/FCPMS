@@ -48,6 +48,7 @@ public:
     QVector<QVector<double>> GenerateLongSignal(ParamSignal& param, int& size);
     InfoList Calculate(ParamSignal& param);
     void coherentSumm(vector<vector<double>> &sgs, vector<double> &result);
+    void transformSignal(vector<double>& base_signal, double delay, double duration, double fshift, double scale, double SNR, vector<double>& ret_sig, ParamSignal& param);
 
     ~GenerationSignal();
 
@@ -55,7 +56,7 @@ public:
     vector<double>Sigma;
     vector<vector<double>>LongSigma;
     vector<vector<double>> InvR;
-    vector<double> InputSignal;
+    vector<vector<double>> InputSignal;
     vector<double> LongInputSignal;
     vector<double> ClearSignal;
     vector<double> SHUM;
