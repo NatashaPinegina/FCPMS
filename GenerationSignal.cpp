@@ -1063,7 +1063,7 @@ void GenerationSignal::newcorrelate(vector<complex<double>>& base_signal, vector
     }
 }
 
-void GenerationSignal::correlate(vector<double>& base_signal, vector<double>& analyzed_signal, vector<double>& correlation, double& sredSigma, double& sredLongSigma)
+void GenerationSignal::correlate(vector<double>& base_signal, vector<double>& analyzed_signal, vector<double>& correlation,vector<double>& time, double& sredSigma, double& sredLongSigma)
 {
    for (int n = -(int)(analyzed_signal.size() - 1); n <= (int)(base_signal.size() - 1); n++)
     {
@@ -1078,15 +1078,19 @@ void GenerationSignal::correlate(vector<double>& base_signal, vector<double>& an
         }
         counter /= (double)analyzed_signal.size();//cnt;//
         correlation.push_back(counter);
+        time.push_back(n);
     }
 }
 
 InfoList GenerationSignal::Calculate(ParamSignal& param)
 {
+    vector<vector<double>> Corr;
+    Corr.resize(KolSat);
+    vector<double> x;
     for(int k=0;k<KolSat;k++) {
 
         vector<double> correlation;
-
+        x.clear();
         if(k+1==KolSat)
         {
             double sredLongSigma1 = 0, sredLongSigma2 = 0;
@@ -1096,7 +1100,7 @@ InfoList GenerationSignal::Calculate(ParamSignal& param)
             }
             sredLongSigma1 /= SummSignal[k].size();
             sredLongSigma2 /= SummSignal[0].size();
-            correlate(SummSignal[k],SummSignal[0],correlation, sredLongSigma1, sredLongSigma2);
+            correlate(SummSignal[k],SummSignal[0],correlation,x, sredLongSigma1, sredLongSigma2);
         }
         else
         {
@@ -1107,23 +1111,58 @@ InfoList GenerationSignal::Calculate(ParamSignal& param)
             }
             sredLongSigma1 /= SummSignal[k].size();
             sredLongSigma2 /= SummSignal[k+1].size();
-            correlate(SummSignal[k],SummSignal[k+1],correlation, sredLongSigma1, sredLongSigma2);
+            correlate(SummSignal[k],SummSignal[k+1],correlation,x, sredLongSigma1, sredLongSigma2);
         }
 
 
-        vector<double> x;
+
         vector<double> ampl;
         double sampling_period = 1. / param.fdisk;// период дискретизации
+        double time=0;
+        for (int i = 0; i < correlation.size(); i++) {
+            time += sampling_period;
+        }
         double t = 0;
         for (int i = 0; i < correlation.size(); i++) {
-            x.push_back(t);
+            //x.push_back(t-time);
             ampl.push_back(abs(correlation[i]));
-            t += sampling_period;
+            //t += sampling_period;
         }
         info.MassOtrisovka.push_back(ampl);
         info.MassOtshetX.push_back(x);
         listt.push_back("Корреляция");
+        Corr[k]=ampl;
     }
+
+
+    double clearance = 1.0 / param.bitrate * param.fdisk;
+    vector<vector<int>> delays;
+    delays.clear();
+    delays.resize(KolSat);
+    for (int i = 0; i < KolSat; i++)
+    {
+        auto delays1 = find_max_n(KolSour, Corr[i], x, clearance);
+        //auto delays1 = find_max_n(KolMax, correlate[i], clearance);
+        delays[i] = delays1;
+    }
+
+    vector<double> SummDelays;
+    SummDelays.clear();
+    SummDelays = criteria(delays, param);
+
+    ofstream fout("output.txt");
+
+    for(int i=0;i<SummDelays.size();i++)
+    {
+        fout << SummDelays[i] << "\t";
+        for(int j=0; j<str[i].size();j++)
+        {
+            fout << str[i][j] << "\t";
+        }
+        fout<<endl;
+    }
+
+    fout.close();
 
     return info;
 }
@@ -1143,4 +1182,79 @@ GenerationSignal::~GenerationSignal()
     info.MassOtshetX.clear();
     info.MassOtrisovka.clear();
     listt.clear();
+}
+
+vector<int> GenerationSignal::find_max_n(int n, vector<double> &sig, vector<double>& time, double clearance)
+{
+    if (sig.empty() || time.empty()) return {};
+    vector<double> abs_values(sig.size());
+    for (int i = 0; i < abs_values.size(); i++)
+    {
+        abs_values[i] = abs(sig[i]);
+    }
+
+    vector <int> max_inds;
+    for (int max_idx = 0; max_idx < n; max_idx++)
+    {
+        int max_ind = 0;
+        for (int i = 1; i < sig.size() - 1; i++)
+        {
+            if (abs_values[i - 1] < abs_values[i] && abs_values[i + 1] < abs_values[i])
+            {
+                int peak_index = i;
+                bool unique_peak = true;
+                for (int j = 0; j < max_inds.size(); j++)
+                {
+                    unique_peak &= abs(peak_index - max_inds[j]) > clearance;	//&& max_inds[j] != 0;
+                }
+                if ((abs_values[peak_index] > abs_values[max_ind]) && unique_peak)
+                {
+                    max_ind = i;
+                }
+            }
+        }
+        max_inds.push_back(max_ind);
+    }
+    sort(max_inds.begin(), max_inds.end());
+    for (auto& ind : max_inds)
+    {
+        ind = time[ind];
+    }
+
+    return max_inds;
+}
+
+vector<double> GenerationSignal::criteria(vector<vector<int>> delays, ParamSignal& param)
+{
+    double clearance = 1.0 / param.bitrate * param.fdisk;
+    int summ = 0;
+    int s = 0;
+    int buf = 0;
+    vector<double> SummDelays;
+    for (int i = 0; i < delays[0].size(); i++)// по элементам первой строке
+    {
+        summ = delays[0][i];
+        s = 1;
+        for (int k = 0; k < delays[0].size(); k++)//по строкам
+        {
+            summ += delays[s][k];
+            int iter = 0;
+            buf = summ;
+            for (int m = 0; m < delays[0].size(); m++)// по столбцам
+            {
+                summ += delays[s + 1][m];
+                if (abs(summ) <= clearance)
+                {
+                    SummDelays.push_back(summ);
+                    string stroka = to_string(i) + to_string(k) + to_string(m);
+                    str.push_back(stroka);
+                }
+                summ = buf;
+            }
+            summ = delays[0][i];
+
+        }
+
+    }
+    return SummDelays;
 }

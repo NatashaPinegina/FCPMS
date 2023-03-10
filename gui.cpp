@@ -16,9 +16,9 @@ namespace ui_gui {
     gui::gui(QWidget *parent) : QWidget(parent), ui(new Ui::gui) {
         ui->setupUi(this);
         ui->f0->setText(QString::number(10000));
-        ui->fdisk->setText(QString::number(500000));
+        ui->fdisk->setText(QString::number(5000000));
         ui->SNR->setText(QString::number(20));
-        ui->bitrate->setText(QString::number(400000));
+        ui->bitrate->setText(QString::number(3000000));
         ui->duration->setText(QString::number(0.005));
         ui->outputT->setText(QString::number(30));
         ui->p->setText(QString::number(7));

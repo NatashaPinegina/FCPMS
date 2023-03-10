@@ -26,7 +26,7 @@ public:
     int kol_bit;
     double sizeSPM;
     int KolSat = 3;
-    int KolSour = 2;
+    int KolSour = 4;
 
 
     /**Function*/
@@ -39,7 +39,7 @@ public:
     void addNoise(vector<double>& buf, double SNR, ParamSignal& param);
     void GetSigma(vector<double>& InputSignal, vector<double>rxx, vector<double>& Sigma, ParamSignal& param);
     void GetLongSignal(vector<double>& InputSignal);
-    void correlate(vector<double>& base_signal, vector<double>& analyzed_signal, vector<double>& correlation, double& sredSigma, double&sredLongSigma);
+    void correlate(vector<double>& base_signal, vector<double>& analyzed_signal, vector<double>& correlation,vector<double>& time, double& sredSigma, double&sredLongSigma);
     QVector<QVector<double>> GenerateShortSignal(ParamSignal& param);
     void newFFT(vector<complex<double>>& in, int direction);
     void GetK(vector<complex<double>>& K, vector<double>& SPNSigma, vector<double>& SPNShum, vector<complex<double>>& HSopr, vector<double>& HMod);
@@ -49,6 +49,8 @@ public:
     InfoList Calculate(ParamSignal& param);
     void coherentSumm(vector<vector<double>> &sgs, vector<double> &result);
     void transformSignal(vector<double>& base_signal, double delay, double duration, double fshift, double scale, double SNR, vector<double>& ret_sig, ParamSignal& param);
+    vector<int> find_max_n(int n, vector<double> &sig, vector<double>& time, double clearance);
+    vector<double> criteria(vector<vector<int>> delays, ParamSignal& param);
 
     ~GenerationSignal();
 
@@ -66,6 +68,7 @@ public:
     QVector<QString> listt;
     vector<vector<double>> SummSignal;
     vector<double> sign;
+    vector<string> str;
 
     vector<double> sdvigTime;
     vector<double> sdvigFreq;
