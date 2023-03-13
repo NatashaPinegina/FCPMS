@@ -15,12 +15,12 @@ namespace ui_gui {
 
     gui::gui(QWidget *parent) : QWidget(parent), ui(new Ui::gui) {
         ui->setupUi(this);
-        ui->f0->setText(QString::number(10000));
-        ui->fdisk->setText(QString::number(5000000));
+        ui->f0->setText(QString::number(1000));
+        ui->fdisk->setText(QString::number(250000));
         ui->SNR->setText(QString::number(20));
-        ui->bitrate->setText(QString::number(3000000));
-        ui->duration->setText(QString::number(0.005));
-        ui->outputT->setText(QString::number(30));
+        ui->bitrate->setText(QString::number(4800));
+        ui->duration->setText(QString::number(0.05));
+        ui->outputT->setText(QString::number(25));
         ui->p->setText(QString::number(7));
         ui->koef_dur->setText(QString::number(0.5));
         ui->t->setText(QString::number(0));

@@ -324,7 +324,7 @@ vector<double> Composition_Matrix_Stroka(vector<vector<double>> Inital_Matrix, v
     return Composition;
 }
 
-void GenerationSignal::GetSigma(vector<double>& InputSignal, vector<double>rx, vector<double>& Sigma, ParamSignal& param)
+void GenerationSignal::GetSigma(vector<double>& InputSignal1, vector<double>rx, vector<double>& Sigma, ParamSignal& param)
 {
     Ymin = false;
     //частота дискретизации
@@ -519,10 +519,10 @@ void GenerationSignal::GetSigma(vector<double>& InputSignal, vector<double>rx, v
         for (int i = ti; i < param.p + ti; i++)
         {
             double counter = 0;
-            for (int j = 0; j < InputSignal.size(); j++)
+            for (int j = 0; j < InputSignal1.size(); j++)
             {
-                if (j < M && j + i < InputSignal.size())
-                    counter += InputSignal[j] * InputSignal[j + i];
+                if (j < M && j + i < InputSignal1.size())
+                    counter += InputSignal1[j] * InputSignal1[j + i];
                 else continue;
             }
             r[Pi] = counter / M;
@@ -648,7 +648,7 @@ void GenerationSignal::transformSignal(vector<double>& base_signal, double delay
                    cos( 2. * M_PI * fshift * (1. / param.fdisk) * (double)i));
         }
     }
-    addNoise(ret_sig, SNR, param);
+   // addNoise(ret_sig, SNR, param);
 }
 
 QVector<QVector<double>> GenerationSignal::GenerateLongSignal(ParamSignal& param, int& size)
@@ -696,7 +696,7 @@ QVector<QVector<double>> GenerationSignal::GenerateLongSignal(ParamSignal& param
     {
         for(int j=0;j<KolSat;j++)
         {
-            sdvigFreq.push_back(DoubleRand(500,-500));
+            sdvigFreq.push_back(DoubleRand(1,0));
         }
     }
 
@@ -707,13 +707,14 @@ QVector<QVector<double>> GenerationSignal::GenerateLongSignal(ParamSignal& param
     LongSignal.resize(KolSat);
     LongSigma.resize(KolSat);
     double d = Duration / 10;
-    addNoise(sign, param.snr, param);
+    vc.resize(KolSat);
     for(int i=0;i<KolSat;i++)
     {
         LongSignal[i].resize(KolSour);
         for(int j=0;j<KolSour;j++)
         {
-            transformSignal(InputSignal[j], sdvigTime[i + KolSat * j] * d, d, sdvigFreq[i + KolSat * j], 1, param.snr, LongSignal[i][j], param);
+            transformSignal(InputSignal[j], sdvigTime[i + KolSat * j] * d, d, 1, sdvigFreq[i + KolSat * j], param.snr, LongSignal[i][j], param);
+            //LongSignal[i][j]=InputSignal[j];
         }
 
         if (KolSour == 1)
@@ -743,27 +744,23 @@ QVector<QVector<double>> GenerationSignal::GenerateLongSignal(ParamSignal& param
         for(int k=0;k<SummSignal[i].size();k++)
             sinus.push_back(sign[k]);
 
-        vector<vector<double>> vc;
-        vc.resize(KolSour);
-        ofstream fout("output.txt");
-        for(int j=0;j<KolSour;j++)
-        {
-            GetSigma(SummSignal[i], sinus, vc[j], param);
+        //addNoise(sinus,param.snr,param);
 
-            info.MassOtrisovka.push_back(vc[j]);
-            vector<double> x;
-            double sampling_period = 1. / param.fdisk;// период дискретизации
-            double t = 0;
-            for (int k = 0; k < vc[j].size(); k++) {
-                x.push_back(t);
-                t += sampling_period;
-                fout << vc[j][k] << endl;
-            }
-            info.MassOtshetX.push_back(x);
-            listt.push_back("Сигма");
-            fout.close();
+        GetSigma(SummSignal[i], sinus, vc[i], param);
 
+
+        info.MassOtrisovka.push_back(vc[i]);
+        vector<double> x;
+        double sampling_period = 1. / param.fdisk;// период дискретизации
+        double t = 0;
+        for (int k = 0; k < vc[i].size(); k++) {
+            x.push_back(t);
+            t += sampling_period;
         }
+        info.MassOtshetX.push_back(x);
+        listt.push_back("Сигма");
+
+
 
 
        // GetSigma(SummSignal[i], sign, LongSigma[i], param);
@@ -780,7 +777,7 @@ QVector<QVector<double>> GenerationSignal::GenerateLongSignal(ParamSignal& param
     for(int i=0;i<LongSignal[0][0].size();i++)
     {
         y[i]=LongSignal[0][0][i];
-        x[i]=dbl_index += sampling_period;
+        x[i]+= sampling_period;
     }
     XY[0]=x;
     XY[1]=y;
@@ -1094,24 +1091,24 @@ InfoList GenerationSignal::Calculate(ParamSignal& param)
         if(k+1==KolSat)
         {
             double sredLongSigma1 = 0, sredLongSigma2 = 0;
-            for (int i = 0; i < SummSignal.size(); i++) {
-                sredLongSigma1 += SummSignal[k][i];
-                sredLongSigma2 += SummSignal[0][i];
+            for (int i = 0; i < vc.size(); i++) {
+                sredLongSigma1 += vc[k][i];
+                sredLongSigma2 += vc[0][i];
             }
-            sredLongSigma1 /= SummSignal[k].size();
-            sredLongSigma2 /= SummSignal[0].size();
-            correlate(SummSignal[k],SummSignal[0],correlation,x, sredLongSigma1, sredLongSigma2);
+            sredLongSigma1 /= vc[k].size();
+            sredLongSigma2 /= vc[0].size();
+            correlate(vc[k],vc[0],correlation,x, sredLongSigma1, sredLongSigma2);
         }
         else
         {
             double sredLongSigma1 = 0, sredLongSigma2 = 0;
-            for (int i = 0; i < SummSignal.size(); i++) {
-                sredLongSigma1 += SummSignal[k][i];
-                sredLongSigma2 += SummSignal[k+1][i];
+            for (int i = 0; i < vc.size(); i++) {
+                sredLongSigma1 += vc[k][i];
+                sredLongSigma2 += vc[k+1][i];
             }
-            sredLongSigma1 /= SummSignal[k].size();
-            sredLongSigma2 /= SummSignal[k+1].size();
-            correlate(SummSignal[k],SummSignal[k+1],correlation,x, sredLongSigma1, sredLongSigma2);
+            sredLongSigma1 /= vc[k].size();
+            sredLongSigma2 /= vc[k+1].size();
+            correlate(vc[k],vc[k+1],correlation,x, sredLongSigma1, sredLongSigma2);
         }
 
 
@@ -1125,7 +1122,7 @@ InfoList GenerationSignal::Calculate(ParamSignal& param)
         double t = 0;
         for (int i = 0; i < correlation.size(); i++) {
             //x.push_back(t-time);
-            ampl.push_back(abs(correlation[i]));
+            ampl.push_back((correlation[i]));
             //t += sampling_period;
         }
         info.MassOtrisovka.push_back(ampl);

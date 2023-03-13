@@ -26,7 +26,7 @@ public:
     int kol_bit;
     double sizeSPM;
     int KolSat = 3;
-    int KolSour = 4;
+    int KolSour = 1;
 
 
     /**Function*/
@@ -69,6 +69,7 @@ public:
     vector<vector<double>> SummSignal;
     vector<double> sign;
     vector<string> str;
+    vector<vector<double>> vc;
 
     vector<double> sdvigTime;
     vector<double> sdvigFreq;
